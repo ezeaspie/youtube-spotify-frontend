@@ -1,14 +1,20 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
 
 import queryString from 'query-string';
+import PlaylistSelection from './components/PlaylistSelection';
+import Home from './components/Home';
+import GeneratedPlaylist from './components/GeneratedPlaylist';
+import RedirectPage from './components/RedirectPage';
 
 class App extends Component {
   constructor(props){
     super(props);
     this.state = {
       spotifyData:undefined,
+      developmentMode:false,
+      currentView:null,
+      playListData:undefined,
     }
   }
 
@@ -36,7 +42,9 @@ class App extends Component {
     }
     return completeObject;
   }
+
   componentDidMount(){
+    this.showHomeScreen();
     const parsed = queryString.parse(window.location.search);
     const accessToken = parsed.access_token;
     console.log(accessToken);
@@ -82,27 +90,179 @@ class App extends Component {
     .then((response)=>{
       console.log(response);
       const spotifyData = this.createSpotifyData(userData,response);
-      this.setState({spotifyData});
+      this.setState({spotifyData},()=>{
+        this.showSpotifyPlaylists()
+      });
     });
   }
 
+  showSpotifyPlaylists = () => {
+    this.setState({currentView:
+    <PlaylistSelection 
+    data={this.state.spotifyData}
+    getYoutubeVideos={this.getYoutubeVideos}
+    />});
+  }
+
+  showHomeScreen = () => {
+    this.setState({currentView:<Home url={"http://localhost:8888/login"}/>});
+  }
+
+  showGeneratedPlayList = (playlistName) => {
+    this.setState({currentView:<GeneratedPlaylist 
+      name={playlistName} 
+      data={this.state.playListData}
+      handleCreatePlaylist={this.handleCreatePlaylist}/>});
+  }
+
+  getYoutubeVideos = (e,playlistData,playlistName="My Awesome Playlist") => {
+    e.preventDefault();
+    let dummyData = [
+      {
+        videoId:"iU5qp-cAtOU",
+        channelId: "UCOlwD0QEW4xzt99rbri-q2w",
+        channelTitle: "Sleepless Group",
+        description: "JULY TALK – the debut album Available worldwide from September 19th (ex North and South America) France and UK available September 22nd Buy now!",
+        liveBroadcastContent: "none",
+        publishedAt: "2013-04-02T14:22:30.000Z",
+        thumbnails: {
+          default: {
+            height: 90,
+            url: "https://i.ytimg.com/vi/iU5qp-cAtOU/default.jpg",
+            width: 120,
+          }
+        },
+        title: "JULY TALK - GUNS + AMMUNITION",
+      },
+      {
+        videoId:"jFwB5ayV0vQ",
+        channelId: "UCOlwD0QEW4xzt99rbri-q2w",
+        channelTitle: "Sleepless Group",
+        description: "JULY TALK – the debut album Available worldwide from September 19th (ex North and South America) France and UK available September 22nd Buy now!",
+        liveBroadcastContent: "none",
+        publishedAt: "2013-04-02T14:22:30.000Z",
+        thumbnails: {
+          default: {
+            height: 90,
+            url: "https://i.ytimg.com/vi/jFwB5ayV0vQ/default.jpg",
+            width: 120,
+          }
+        },
+        title: "JULY TALK - PAPER GIRL",
+      }
+    ]
+    if(this.state.developmentMode){
+      //FOR DEVELOPMENT PURPOSES ONLY - SEE ELSE STATEMENT FOR ACTUAL FLOW
+      this.setState({playListData:dummyData},()=>{
+        this.showGeneratedPlayList(playlistName);
+      });
+    }
+    else{
+      //On Playlist selection, send AJAX request that returns an array of YT Video Data Objects
+    const post = async (url,data) => {
+      const params = {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      };
+      const response = await fetch(url, params);
+    
+      if (response.status < 200 && response.status >= 300) {
+        const res = await response.json();
+    
+        throw new Error(res);
+      }
+      return response.json();
+    };
+
+    const backendURI = this.getBackendURI();
+
+    post(`${backendURI}/ytcallback`,playlistData)
+      .then((res) => {console.log(res);
+        //Set the state to show the generated Playlist and store RESPONSE data.
+        this.setState({playListData:res},()=>{
+          this.showGeneratedPlayList(playlistName);
+        })
+      })
+      .catch(error => {
+        console.log(error.message);
+    });
+    }
+  }
+
+  handleCreatePlaylist = (playlistName="My Awesome Playlist") => {
+    //Create a POST-fetch function to call /generatePlaylist
+    const post = async (url,data) => {
+      const params = {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      };
+      const response = await fetch(url, params);
+      if (response.status < 200 && response.status >= 300) {
+        const res = await response.json();
+        throw new Error(res);
+      }
+      return response.json();
+    };
+
+    //Data to be sent to server
+    const videoIds = this.state.playListData.map(videoData=>{
+      return videoData.videoId
+    })
+
+    let playlistInfo = {playlistName,videoIds}
+    const backendURI = this.getBackendURI();
+
+    post(`${backendURI}/generatePlaylist`,playlistInfo)
+      .then(res => {
+        console.log(res);
+        this.showRedirectPage(res.playlistURL);
+      })
+      .catch(error => {
+        console.log(error.message);
+    });
+  }
+
+  showRedirectPage = (url) => {
+    this.setState({currentView: <RedirectPage url={url}/>});
+  }
+
+  getBackendURI = () => {
+    if(this.state.developmentMode){
+      return 'http://localhost:8888';
+    }
+    return 'https://youtube-spotify-backend.herokuapp.com';
+  }
+
   render() {
+    const backendURI = this.getBackendURI();
+    const signInURI=`${backendURI}/login`
     return (
       <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
+      <header>
+            <h1>Spotify-Youtube Playlists</h1>
+              {
+                this.state.spotifyData === undefined?
+                <div className="user-info">
+                  <a href={signInURI} className="button-main">Sign in</a>
+                </div>
+                :
+                <div className="user-info">
+                        <img src={this.state.spotifyData.userImage} alt="spotify-profile"></img>
+                        <h2>{this.state.spotifyData.userName}</h2>
+                </div>
+              }
+          </header>
+      {
+        this.state.currentView
+      }
       </div>
     );
   }
