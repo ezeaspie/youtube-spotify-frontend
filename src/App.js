@@ -105,7 +105,7 @@ class App extends Component {
   }
 
   showHomeScreen = () => {
-    this.setState({currentView:<Home url={"http://localhost:8888/login"}/>});
+    this.setState({currentView:<Home url={this.getBackendURI()}/>});
   }
 
   showGeneratedPlayList = (playlistName) => {
