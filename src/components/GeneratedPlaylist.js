@@ -17,7 +17,7 @@ class GeneratedPlaylist extends Component{
                     this.props.data.map((video,i)=>{
                         return(
                             <li className="youtube-video" key={i}>
-                                <img className="thumbnail" src={video.thumbnails.default.url} alt={video.title}></img>
+                                <img className="thumbnail" src={video.thumbnails.medium.url} alt={video.title}></img>
                                 <div>
                                     <p className="channel">{video.channelTitle}</p>
                                     <h3 className="title">{video.title}</h3>

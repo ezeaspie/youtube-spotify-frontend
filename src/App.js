@@ -6,6 +6,7 @@ import PlaylistSelection from './components/PlaylistSelection';
 import Home from './components/Home';
 import GeneratedPlaylist from './components/GeneratedPlaylist';
 import RedirectPage from './components/RedirectPage';
+import LoadingScreen from './components/LoadingScreen';
 
 class App extends Component {
   constructor(props){
@@ -130,6 +131,11 @@ class App extends Component {
             height: 90,
             url: "https://i.ytimg.com/vi/iU5qp-cAtOU/default.jpg",
             width: 120,
+          },
+          medium: {
+            height: 90,
+            url: "https://i.ytimg.com/vi/iU5qp-cAtOU/default.jpg",
+            width: 120,
           }
         },
         title: "JULY TALK - GUNS + AMMUNITION",
@@ -143,6 +149,11 @@ class App extends Component {
         publishedAt: "2013-04-02T14:22:30.000Z",
         thumbnails: {
           default: {
+            height: 90,
+            url: "https://i.ytimg.com/vi/jFwB5ayV0vQ/default.jpg",
+            width: 120,
+          },
+          medium: {
             height: 90,
             url: "https://i.ytimg.com/vi/jFwB5ayV0vQ/default.jpg",
             width: 120,
@@ -220,14 +231,18 @@ class App extends Component {
     let playlistInfo = {playlistName,videoIds}
     const backendURI = this.getBackendURI();
 
-    post(`${backendURI}/generatePlaylist`,playlistInfo)
-      .then(res => {
-        console.log(res);
-        this.showRedirectPage(res.playlistURL);
-      })
-      .catch(error => {
-        console.log(error.message);
-    });
+    this.setState({currentView:<LoadingScreen videoData={this.state.playListData}/>},
+      ()=>{
+        post(`${backendURI}/generatePlaylist`,playlistInfo)
+          .then(res => {
+            console.log(res);
+            this.showRedirectPage(res.playlistURL);
+          })
+          .catch(error => {
+            console.log(error.message);
+        })
+      }
+    )
   }
 
   showRedirectPage = (url) => {
